@@ -22,7 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Create participants list HTML
         const participantsList = details.participants.length > 0
-          ? details.participants.map(p => `<li>${p}</li>`).join('')
+          ? details.participants.map(p => `
+              <li>
+                <span class="participant-name">${p}</span>
+                <button class="delete-btn" data-activity="${name}" data-email="${p}" aria-label="Remove participant">×</button>
+              </li>
+            `).join('')
           : '<li><em>No participants yet</em></li>';
 
         activityCard.innerHTML = `
@@ -39,6 +44,36 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Add delete button event listeners
+        activityCard.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const activity = btn.dataset.activity;
+            const email = btn.dataset.email;
+
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activity)}/remove?email=${encodeURIComponent(email)}`,
+                {
+                  method: "DELETE",
+                }
+              );
+
+              const result = await response.json();
+
+              if (response.ok) {
+                // Refresh activities after successful removal
+                fetchActivities();
+              } else {
+                alert(result.detail || "Failed to remove participant");
+              }
+            } catch (error) {
+              alert("Failed to remove participant. Please try again.");
+              console.error("Error removing participant:", error);
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -73,6 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities after successful signup
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
